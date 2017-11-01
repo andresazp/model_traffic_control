@@ -1,0 +1,44 @@
+# tutprial https://www.pyimagesearch.com/2016/02/08/opencv-shape-detection/
+
+# import the necessary packages
+import cv2
+
+
+class ShapeDetector:
+    def __init__(self):
+        pass
+    def detect(self, c):
+        # initialize the shape name and approximate the contour
+        shape = "desconocido"
+        peri = cv2.arcLength(c, True)
+        approx = cv2.approxPolyDP(c, 0.04 * peri, True)
+
+        # if the shape is a triangle, it will have 3 vertices
+        if len(approx) == 3:
+            shape = "triangulo"
+
+            # if the shape has 4 vertices, it is either a square or
+            # a rectangle
+        elif len(approx) == 4:
+            # compute the bounding box of the contour and use the
+            # bounding box to compute the aspect ratio
+            (x, y, w, h) = cv2.boundingRect(approx)
+            ar = w / float(h)
+
+            # a square will have an aspect ratio that is approximately
+            # equal to one, otherwise, the shape is a rectangle
+            shape = "cuadrado" if ar >= 0.8 and ar <= 1.2 else "cuadrilatero"
+
+            # if the shape is a pentagon, it will have 5 vertices
+        elif len(approx) == 5:
+            shape = "pentagono"
+
+        elif len(approx) < 6:
+            shape = "poligono"
+
+            # otherwise, we assume the shape is a circle
+        else:
+            shape = "circulo"
+
+            # return the name of the shape
+            return shape
