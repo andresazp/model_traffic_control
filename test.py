@@ -1,8 +1,10 @@
 from avg_cv.shape_detector import ShapeDetector
 from avg_cv.detect_tracks import locate_intersections
+import avg_cv.detect_tracks
 import argparse
 import imutils
 import cv2
+
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -21,4 +23,4 @@ if args["image"]:
 #     camera_num=args["camera"]
 #     print(camera_num)
 
-locate_intersections(frame)
+locate_intersections(frame, 4, 3)

@@ -2,6 +2,7 @@
 from avg_cv.shape_detector import ShapeDetector
 import argparse
 import imutils
+import numpy
 import cv2
 
 
@@ -12,16 +13,25 @@ import cv2
 #         super(DetectTracks, self).__init__()
 #         self.arg = arg
 #         pass
-
-class Tracks(object):
-    """The object tha holds all the infmration about the run tracks,
-    intersections, roads and avenues"""
-    def __init__(self):
-        super(Tracks, self).__init__()
-        self = []
+#
+# class Track(list):
+#     """The object tha holds all the infmration about the run tracks,
+#     intersections, roads and avenues"""
 
 
-def locate_intersections(capture):
+class intersection(object):
+    """All the information about one intersection un the tacks.
+        Vertices must be a list of CV2 points
+    """
+    def __init__(self, row, column, vertices, center, size):
+        super(intersection, self).__init__()
+        self.row = row
+        self.column = column
+        self.vertices = vertices
+        self.center = center
+        self.size = size
+
+def locate_intersections(capture, avenues, streets):
     frame = capture
     """ Preprocess frames and locates intersecitons """
     resized = imutils.resize(frame, width=400)
@@ -33,8 +43,8 @@ def locate_intersections(capture):
     cv2.startWindowThread()
 
     # Display an image
-    cv2.imshow("Imagen a procesar", frame)
-    cv2.waitKey(0)
+    # cv2.imshow("Imagen a procesar", frame)
+    # cv2.waitKey(0)
 
     # convert the resized image to grayscale, blur it slightly,
     # and threshold it
@@ -43,8 +53,8 @@ def locate_intersections(capture):
     # lab = cv2.cvtColor(blurred, cv2.COLOR_BGR2LAB)
     thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
 
-    cv2.imshow("threshhold", thresh)
-    cv2.waitKey(0)
+    # cv2.imshow("threshhold", thresh)
+    # cv2.waitKey(0)
 
     # find contours in the thresholded image and initialize the
     # shape detector
@@ -67,8 +77,6 @@ def locate_intersections(capture):
         if (len(vertices)) == 4 and (ar >= 0.8 and ar <= 1.2):
             # compute the bounding box of the contour and use the
             # bounding box to compute the aspect ratio
-            (x, y, w, h) = cv2.boundingRect(vertices)
-            ar = w / float(h)
 
             # compute the center of the contour, then detect the name of the
             # shape using only the contour
@@ -76,7 +84,8 @@ def locate_intersections(capture):
             try:
                 cX = int((M["m10"] / M["m00"]) * ratio)
                 cY = int((M["m01"] / M["m00"]) * ratio)
-                item = {'pos': {x: cX, y: cY}, 'contour': c}
+
+                pos= {x: cX, y: cY}
                 intersection_list.append(item)
             except Exception as e:
                 print(str(e))
@@ -88,19 +97,29 @@ def locate_intersections(capture):
             c = c.astype("float")
             c *= ratio
             c = c.astype("int")
+            # print(str(vertices))
+
+
+            vertices = vertices.astype("float")
+            vertices *= ratio
+            vertices = vertices.astype("int")
+
+
+
             cv2.polylines(display, c, True, (0, 255, 255))
             cv2.drawContours(display, [c], -1, (0, 255, 0), 2)
             cv2.circle(display, (cX, cY), 2, (0, 0, 0), -1)
+            cv2.rectangle(display, (cX - w, cY - h), (cX + w, cY + h), (255, 0, 0), 2)
+            cv2.polylines(display, [vertices], True, (255, 0, 255), 2)
             cv2.putText(display, "interseccion " + str(+i), (cX + 15, cY + 15),
                         cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
 
-
-            # i++
+            intersection_list.append(intersection(intersection_list, i, i / avenues, pos, h))
             i += 1
-            print(str(intersection_list))
-            # show the output image
-            # Display an image
-            cv2.imshow("Image", frame)
-            cv2.waitKey(0)
+
+    print(str(intersection_list))
+    # show the output image
+    cv2.imshow("Intersecciones", frame)
+    cv2.waitKey(0)
 
     cv2.destroyAllWindows()
