@@ -1,5 +1,7 @@
 from avg_cv.shape_detector import ShapeDetector
-from avg_cv.detect_tracks import locate_intersections
+from avg_cv.detect_tracks import define_tracks
+from avg_cv.follow_avg import Setup_AVGs
+from avg_cv.follow_avg import locateHue
 import avg_cv.detect_tracks
 import argparse
 import imutils
@@ -19,8 +21,45 @@ mode_file = False
 if args["image"]:
     mode_file = True
     frame = cv2.imread(args["image"])
-# elif args["camera"]:
-#     camera_num=args["camera"]
-#     print(camera_num)
+    camera = False
+else:
+    camera = True
+    cam = cv2.VideoCapture(0)
+    while True:
+        ret, frame = cam.read()
+        if not ret:
+            break
+        cv2.imshow("presione espacio para empezar", frame)
+        k = cv2.waitKey(1)
+        if k%256 == 32:
+            # SPACE pressed
+            cv2.destroyAllWindows()
+            break
 
-locate_intersections(frame, 4, 3)
+
+# define_tracks(frame, 4, 3)
+AVG_list = Setup_AVGs(frame)
+
+while True:
+
+    if camera:
+        ret, frame = cam.read()
+        if not ret:
+            break
+
+    cv2.namedWindow("real time")
+    image_AVGs = frame.copy()
+    for AVG in AVG_list:
+        center = locateHue(frame, AVG.hue)
+        print ('%i (hue:%s): %s' % (AVG.id, AVG.hue, center))
+        try:
+            cv2.circle(image_AVGs, (int(center[0]), int(center[1])), 20, (0, 255, 255), 2)
+            cv2.circle(image_AVGs, center, 5, (0, 0, 255), -1)
+            cv2.putText(image_AVGs, "AVG " + str(AVG.id), (center[0] + 10, center[1] + 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
+        except:
+            print('target out of frame')
+    cv2.waitKey(1)
+    cv2.imshow("real time", image_AVGs)
+# close all open windows
+cv2.destroyAllWindows()
