@@ -20,10 +20,10 @@ import cv2
 
 ''''condiciones globales sobre las direcciones de las calles y avenidas '''
 def av_right(avenue):
-    if avenue % 2 > 0:
+    if avenue + 1 % 2 > 0:
         return True
 def st_down(street):
-    if street % 2 > 0:
+    if street + 1 % 2 > 0:
         return True
 
 
@@ -250,7 +250,7 @@ def define_tracks(capture, avenues, streets):
             # TODO Create Poligon
 
                 # TODO normal case
-                
+
                     # TODO pick the two points most in the iverse direction of traffic
                         # TODO pick the two points most in sirection of traffic from_st or from_av
                 # TODO edge cases
