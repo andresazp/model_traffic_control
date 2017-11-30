@@ -5,6 +5,7 @@ import imutils
 import numpy
 import cv2
 
+return_tracks = False
 
 # class DetectTracks:
 #     """Reognizes the laypout of the track and IDs interscetions optically,
@@ -32,41 +33,35 @@ class Zone(object):
     """basisc about one intersection un the tacks.
         Vertices must be a list of CV2 points
     """
-    def __init__(self, row, column, vertices, center, size, contour = False ):
+    def __init__(self, vertices, center, size, contour = None ):
         super(Zone, self).__init__()
-        self.row = row
-        self.column = column
         self.vertices = vertices
         self.center = center
         self.size = size
         self.contour = contour
         self.occupied = False
-        # self=up
-    def right(self):
-        return av_right(self.row)
-    def down(self):
-        return av_right(self.column)
 
-class Crossing(object):
+    def __str__(self):
+        return "Vertices: " + str(self.vertices) + "\nCenter: " + str(self.center)
+
+
+class Crossing(Zone):
     """basisc about one intersection un the tacks.
         Vertices must be a list of CV2 points
     """
-    def __init__(self, row, column, vertices, contour, center, size):
-        super(Crossing, self).__init__()
-        self.row = row
-        self.column = column
-        self.vertices = vertices
-        self.contour = contour
-        self.center = center
-        self.size = size
-        self.occupied = False
-        # self=up
+    def __init__(self, av, st, vertices, contour, center, size):
+        super(Crossing, self).__init__(vertices, center, size, contour)
+        self.av = av
+        self.st = st
+
+    def __str__(self):
+        return super().__str__() + "; Av: " + self.av + ", St :" + self.st
 
     def right(self):
         return av_right(self.row)
 
     def down(self):
-        return av_right(self.column)
+        return st_down(self.column)
 
     def vertices_x(self):
         return sorted(self.vertices, key=lambda vertex: vertex[0][0])
@@ -157,7 +152,7 @@ def locate_intersections(frame, avenues, streets):
                 cX = int((M["m10"] / M["m00"]) * ratio)
                 cY = int((M["m01"] / M["m00"]) * ratio)
 
-                pos = {x: cX, y: cY}
+                pos = (cX, cY)
             except Exception as e:
                 print(str(e))
             # Print the name of the current shape
@@ -174,26 +169,37 @@ def locate_intersections(frame, avenues, streets):
             vertices *= ratio
             vertices = vertices.astype("int")
 
-            cv2.polylines(display, c, True, (0, 255, 255))
-            cv2.drawContours(display, [c], -1, (0, 255, 0), 2)
-            cv2.circle(display, (cX, cY), 2, (0, 0, 0), -1)
-            cv2.polylines(display, [vertices], True, (255, 0, 255), 2)
-            cv2.putText(display, "interseccion " + str(+i), (cX + 15, cY + 15),
-                        cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
-
-            item=Crossing(i % (avenues - 1), i / (streets - 1), vertices, c, pos, h)
+            item = Zone(vertices, pos, h, contour=c)
             intersection_zone_list.append(item)
-            index=0
-
-            for vertex in vertices:
-                # print(str(vertex[0][1]))
-
-                cv2.putText(
-                    display, str(index), (int(vertex[0][0]) + 3, int(vertex[0][1]) + 3),
-                    cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
-                index += 1
             i += 1
+    # order by y axis
+    intersection_zone_list.sort(key=lambda zone: zone.center[1], reverse=True)
+    # brake into rows (avenues) to sort by X each
+    rows_zones = [intersection_zone_list[i:i + streets] for i in xrange(0, len(intersection_zone_list), streets)]
+    intersection_zones_ordered = list()
+    for row in rows_zones:
+        row.sort(key=lambda zone: zone.center[0],)
+        intersection_zones_ordered += row
+        print(intersection_zones_ordered)
+    for i, zone in enumerate(intersection_zones_ordered):
+        av = ( (i ) / streets )
+        st = ( (i ) % streets )
+        cv2.polylines(display, [zone.contour], True, (0, 255, 0), 1)
+        # cv2.drawContour(display, zone.contour, -1, (0, 255, 0), 2)
+        cv2.circle(display, zone.center, 2, (255, 0, 255), -1)
+        cv2.polylines( display, [zone.vertices], True, (255, 0, 255), 2)
+        cv2.putText( display, "%i: %i,%i" %(i+1, av, st ),
+                        (zone.center[0] - 35,
+                            zone.center[1] + 15),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            .5,
+                            (0, 0, 0),
+                            2
+        )
+        
 
+    cv2.imshow("Intersections", display)
+    cv2.waitKey(0)
     print(str(intersection_zone_list[1].vertices))
     print(str(intersection_zone_list[1].vertices_x()))
     # show the output image
@@ -329,9 +335,5 @@ def define_tracks(capture, avenues, streets):
                         'Se trata de encontrar from_av que no existe',
                         crossing, av, st)
                 return from_av
-
-            # now to set all waiting zones
-
-
         else:
             raise ValueError('non-implemented case for track directions')
