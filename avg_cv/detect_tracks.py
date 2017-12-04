@@ -51,13 +51,38 @@ class Zone(object):
         self.contour = contour
         self.occupied = False
 
+    def vertices_x(self):
+        return sorted(self.vertices, key=lambda vertex: vertex[0][0])
+    def vertices_y(self):
+        return sorted(self.vertices, key=lambda vertex: vertex[0][1])
+
+
+    def __str__(self):
+        return "Vertices: %s \nCenter: %s" % (self.vertices, self.center)
+
+class Crossing(Zone):
+    """basisc about one intersection un the tacks.
+        Vertices must be a list of CV2 points
+    """
+    def __init__(self, av, st, zone):
+        super(Crossing, self).__init__(
+                zone.vertices, zone.center, zone.size, zone.contour)
+        self.av = av
+        self.st = st
+
+    def __str__(self):
+        return  "Crossing: Av: " + str(self.av) + ", St :" + str(self.st)
+
+    def right(self):
+        return av_right(self.av)
+
+    def down(self):
+        return st_down(self.st)
 
     def order_vertices(self):
         pts = self.vertices
-        pprint.pprint(pts)
-        for p in pts:
-            p = p[0][1]
-        pprint.pprint(pts)
+        pts = pts.reshape(-1,1,2)
+        pts = np.vstack(pts).squeeze()
 
 
         # source =  https://www.pyimagesearch.com/2016/03/21/ordering-coordinates-clockwise-with-python-and-opencv/
@@ -73,40 +98,18 @@ class Zone(object):
         # y-coordinates so we can grab the top-left and bottom-left
         # points, respectively
         leftMost = leftMost[np.argsort(leftMost[:, 1]), :]
-        (tl, bl) = leftMost
-
-        # now that we have the top-left coordinate, use it as an
-        # anchor to calculate the Euclidean distance between the
-        # top-left and right-most points; by the Pythagorean
-        # theorem, the point with the largest distance will be
-        # our bottom-right point
-        D = distance.cdist(tl[np.newaxis], rightMost, "euclidean")[0]
-        (br, tr) = rightMost[np.argsort(D)[::-1], :]
+        tl = leftMost [0]
+        bl = leftMost [1]
+        rightMost = rightMost[np.argsort(rightMost[:, 1]), :]
+        tr = rightMost [0]
+        br = rightMost [1]
 
         # return the coordinates in top-left, top-right,
         # bottom-right, and bottom-left order
-        return np.array([tl, tr, br, bl], dtype="float32")
-
-    def __str__(self):
-        return "Vertices: %s \nCenter: %s" % (self.vertices, self.center)
-
-class Crossing(Zone):
-    """basisc about one intersection un the tacks.
-        Vertices must be a list of CV2 points
-    """
-    def __init__(self, av, st, zone):
-        super(Crossing, self).__init__(zone.vertices, zone.center, zone.size, zone.contour)
-        self.av = av
-        self.st = st
-
-    def __str__(self):
-        return super().__str__() + "; Av: " + self.av + ", St :" + self.st
-
-    def right(self):
-        return av_right(self.av)
-
-    def down(self):
-        return st_down(self.st)
+        a = [tl, tr, br, bl]
+        # pprint.pprint(a)
+        # return  a
+        return np.array(a, dtype="int32")
 
 
 class Intersection(Crossing):
@@ -177,25 +180,28 @@ def from_av(crossing, intersection_zone_list, streets, avenues):
         intended_from_av_st = st
         intended_from_av_av -= 1
 
-        if intended_from_av_st < 0:
-            # top left corner in case down(0) right(0)
-            intended_from_av_av = av
+    if intended_from_av_av < 0:
+        # bottom left corner in case down(0) right(0)
+        intended_from_av_av = av
 
     elif intended_from_av_st > (avenues - 1):
         intended_from_av_st = st
         intended_from_av_av += 1
 
     try:
+        print intended_from_av_av
+        print intended_from_av_st
         from_av = next(
             zone for zone in intersection_zone_list
             if zone.av == intended_from_av_av
             and zone.st == intended_from_av_st
         )
+        return from_av
     except StopIteration:
         raise ValueError(
             'Se trata de encontrar from_av que no existe',
             crossing, av, st)
-    return from_av
+        return False
 
 
 def locate_intersections(frame, avenues, streets):
@@ -231,6 +237,7 @@ def locate_intersections(frame, avenues, streets):
     # find contours in the image and initialize the shape detector
     contours = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
                                 cv2.CHAIN_APPROX_SIMPLE)
+    # contours = np.vstack(contours).squeeze()
     contours = contours[0] if imutils.is_cv2() else contours[1]
     # color_labels
 
@@ -275,6 +282,7 @@ def locate_intersections(frame, avenues, streets):
             item = Zone(vertices, pos, h, contour=c)
             intersection_zones.append(item)
             i += 1
+
     # order by y axis
     intersection_zones.sort(key=lambda zone: zone.center[1], reverse=True)
     # brake into rows (avenues) to sort by X each
@@ -324,6 +332,7 @@ def define_tracks(capture, avenues, streets):
     crossings = locate_intersections(frame, avenues, streets)
     intersection_list = list()
 
+    display=frame.copy()
     for index, crossing in enumerate(crossings):
         # TODO implement better av st resolution
         av = crossing.av % (avenues - 1)
@@ -346,14 +355,63 @@ def define_tracks(capture, avenues, streets):
             wait_av = []
             wait_st_c = [0, 0]
             wait_st = []
-
             # general case
+            cv2.imshow("test", display)
+            index=0
+            for vertex in crossing.order_vertices():
+                # print(str(vertex[0][1]))
+                print vertex
+                # print vertex[0][0]
+                cv2.putText(
+                    display, str(index), (int(vertex[0]) + 3, int(vertex[1]) + 3),
+                    cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
+                index += 1
+                cv2.imshow("test", display)
 
-            pprint.pprint(crossing.vertices)
-            pprint.pprint(crossing.order_vertices())
 
+            def Fav(crossing):
+                return from_av(crossing, crossings, 4, 3)
+            def Fst(crossing):
+                return from_st(crossing, crossings, 4, 3)
+            if (
+                (Fav(crossing) != crossing)
+                and Fav(crossing).st != crossing.st
+            ):
+                if crossing.right():
+                    wait_av.append(crossing.order_vertices()[0])
+                    wait_av.append(crossing.order_vertices()[3])
+                    wait_av.append(Fav(crossing).order_vertices()[2])
+                    wait_av.append(Fav(crossing).order_vertices()[1])
+                if not crossing.right():
+                    wait_av.append(crossing.order_vertices()[1])
+                    wait_av.append(crossing.order_vertices()[2])
+                    wait_av.append(Fav(crossing).order_vertices()[3])
+                    wait_av.append(Fav(crossing).order_vertices()[0])
+            if (
+                (Fst(crossing) != crossing)
+                and Fst(crossing).av != crossing.av
+            ):
+                if crossing.down():
+                    wait_st.append(crossing.order_vertices()[0])
+                    wait_st.append(crossing.order_vertices()[1])
+                    wait_st.append(Fst(crossing).order_vertices()[2])
+                    wait_st.append(Fst(crossing).order_vertices()[3])
+                if not crossing.down():
+                    wait_st.append(crossing.order_vertices()[3])
+                    wait_st.append(crossing.order_vertices()[2])
+                    wait_st.append(Fst(crossing).order_vertices()[1])
+                    wait_st.append(Fst(crossing).order_vertices()[0])
 
-
+            if len(wait_av)>0:
+                wait_av=np.array(wait_av, dtype="int32")
+                pprint.pprint(wait_av)
+                cv2.polylines( display, [wait_av], True, (100, 255, 100), 5)
+            if len(wait_st)>0:
+                wait_st=np.array(wait_st, dtype="int32")
+                pprint.pprint(wait_st)
+                cv2.polylines( display, [wait_st], True, (255, 100, 100), 5)
+            cv2.imshow("test", display)
 
         else:
             raise ValueError('non-implemented case for track directions')
+    cv2.waitKey(0)
