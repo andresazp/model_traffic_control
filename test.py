@@ -11,8 +11,9 @@ import cv2
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--image", required=False, help="path to input image")
-# ap.add_argument("-c", "--camera", required=False,
-# 	help="path to the input image")
+ap.add_argument("-c", "--camera",
+                required=False,
+                help="path to the input image")
 args = vars(ap.parse_args())
 
 # load the image
@@ -23,8 +24,12 @@ if args["image"]:
     frame = cv2.imread(args["image"])
     camera = False
 else:
+    print "using camera"
     camera = True
     cam = cv2.VideoCapture(0)
+    if args["camera"]:
+        print "Camera selected: %i" % int(args["camera"])
+        cam = cv2.VideoCapture(int(args["camera"]))
     while True:
         ret, frame = cam.read()
         if not ret:
@@ -37,7 +42,20 @@ else:
             break
 
 
-# define_tracks(frame, 4, 3)
+define_tracks(frame, 3, 4)
+ret = None
+Frame = None
+while True:
+    ret, frame = cam.read()
+    if not ret:
+        break
+    cv2.imshow("presione espacio cuando haya colocado AVGs", frame)
+    k = cv2.waitKey(1)
+    if k%256 == 32:
+        # SPACE pressed
+        cv2.destroyAllWindows()
+        break
+
 AVG_list = Setup_AVGs(frame)
 
 while True:
