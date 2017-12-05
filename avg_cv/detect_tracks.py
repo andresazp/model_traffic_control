@@ -252,13 +252,29 @@ def locate_intersections(frame, avenues, streets):
     cv2.waitKey(800)
     cv2.destroyWindow("Imagen a procesar")
 
+
     #preprocess to get iniital contours
     gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+    gray = cv2.dilate(gray, None, iterations=1)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
-
-    # cv2.imshow("threshhold", thresh)
+    thresh = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY)[1]
+    cv2.imshow("threshhold", thresh)
+    cv2.waitKey(0)
+    #
+    # gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+    # gray = cv2.erode(gray, None, iterations=1)
+    # gray = cv2.dilate(gray, None, iterations=6)
+    # blurred = cv2.medianBlur(gray, 9)
+    # gray = cv2.dilate(gray, None, iterations=6)
+    # blurred = cv2.medianBlur(blurred, 9)
+    # blurred = cv2.erode(blurred, None, iterations=1)
+    # thresh = cv2.threshold(blurred, 180, 255, cv2.THRESH_BINARY)[1]
+    # cv2.imshow("threshhold SIMPLIFICADO", thresh)
     # cv2.waitKey(0)
+
+
+
+
 
     # find contours in the image and initialize the shape detector
     contours = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
