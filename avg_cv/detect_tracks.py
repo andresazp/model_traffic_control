@@ -8,6 +8,7 @@ import cv2
 import pprint
 
 return_tracks = False
+debug = True
 
 # class DetectTracks:
 #     """Reognizes the laypout of the track and IDs interscetions optically,
@@ -69,6 +70,7 @@ class Crossing(Zone):
                 zone.vertices, zone.center, zone.size, zone.contour)
         self.av = av
         self.st = st
+        self.zone = zone
 
     def __str__(self):
         return  "Crossing: Av: " + str(self.av) + ", St :" + str(self.st)
@@ -118,11 +120,36 @@ class Intersection(Crossing):
     areas, one wating in from the avenue one form the street
     """
 
-    def __init__(self, crossing, wait_area_avenue, wait_area_street):
+    def __init__(self, crossing, wait_area_avenue=None,
+                 wait_area_street=None, from_av=None, from_st=None):
         super(Intersection, self).__init__(
-            crossing.av, crossing.st, crossing.zone)
+            crossing.av, crossing.st,
+            Zone(
+                crossing.vertices, crossing.center,
+                crossing.size, contour=crossing.contour
+            )
+        )
         self.avenue_position = wait_area_avenue
         self.street_position = wait_area_street
+        self.from_av = from_av
+        self.from_st = from_st
+
+    def here(self, p):
+        if p in self.vertices:
+            return "x"
+    elif p in self.avenue_position.vertices:
+            return "av":
+        elif p in self.street_position.vertices
+            return "st":
+        else:
+            return False
+
+#  TODO: implement Tracks class
+# class Tracks(list):
+#     '''
+#     '''
+#
+#     def __init__(self, avenues, streets)
 
 
 def from_st(crossing, intersection_zone_list, streets, avenues):
@@ -184,13 +211,11 @@ def from_av(crossing, intersection_zone_list, streets, avenues):
         # bottom left corner in case down(0) right(0)
         intended_from_av_av = av
 
-    elif intended_from_av_st > (avenues - 1):
+    elif intended_from_av_st > (streets - 1):
         intended_from_av_st = st
         intended_from_av_av += 1
 
     try:
-        print intended_from_av_av
-        print intended_from_av_st
         from_av = next(
             zone for zone in intersection_zone_list
             if zone.av == intended_from_av_av
@@ -209,12 +234,13 @@ def locate_intersections(frame, avenues, streets):
     Preprocess frames and locates intersecitons in it, returns a list of
     intersection objects must include the number of strets and avenutes and the
     frame must have all intersections in a largely horizontal fasion
-    for exapmple: avenues=2 streets =4
-    [5] [6] [7] [8] [9]
-    [0] [1] [2] [3] [4]
+    for exapmple: avenues=3 streets =4
+    [ ] [ ] [ ] [ ]
+    [ ] [ ] [ ] [ ]
+    [ ] [ ] [ ] [ ]
     """
 
-    resized = imutils.resize(frame, width=900)
+    resized = imutils.resize(frame, width=600)
     cv2.bitwise_not(resized, resized)
     # ratio between resezed frame and frame, expects same dimentions
     ratio = frame.shape[0] / float(resized.shape[0])
@@ -333,6 +359,8 @@ def define_tracks(capture, avenues, streets):
     intersection_list = list()
 
     display=frame.copy()
+    display_backup=display.copy()
+
     for index, crossing in enumerate(crossings):
         # TODO implement better av st resolution
         av = crossing.av % (avenues - 1)
@@ -401,17 +429,42 @@ def define_tracks(capture, avenues, streets):
                     wait_st.append(crossing.order_vertices()[2])
                     wait_st.append(Fst(crossing).order_vertices()[1])
                     wait_st.append(Fst(crossing).order_vertices()[0])
+            item = Intersection(
+                crossing,
+                wait_area_avenue = wait_av,
+                wait_area_street = wait_st,
+                from_av = [Fav(crossing).av, Fav(crossing).st],
+                from_st = [Fst(crossing).av, Fst(crossing).st],
+            )
+            intersection_list.append(item)
+
+            if debug:
+                print('Creating intersection')
+                print('Av: %i, St: %i' % (item.av, item.st))
+                print('from_av: %s - from_st %s' %(item.from_av, item.from_st))
+                print('Wait av:')
+                pprint.pprint(wait_av)
+                print('Wait st:')
+                pprint.pprint(wait_st)
 
             if len(wait_av)>0:
                 wait_av=np.array(wait_av, dtype="int32")
-                pprint.pprint(wait_av)
-                cv2.polylines( display, [wait_av], True, (100, 255, 100), 5)
+                cv2.fillPoly( display, [wait_av], (100, 100, 200, 0.1), 1)
             if len(wait_st)>0:
                 wait_st=np.array(wait_st, dtype="int32")
-                pprint.pprint(wait_st)
-                cv2.polylines( display, [wait_st], True, (255, 100, 100), 5)
+                cv2.fillPoly( display, [wait_st], (200, 100, 100, 0.1), 1)
             cv2.imshow("test", display)
 
+
+
+
+            if debug:
+                cv2.waitKey(0)
+            else:
+                cv2.waitKey(200)
         else:
             raise ValueError('non-implemented case for track directions')
+    cv2.waitKey(0)
+    display=display_backup.copy()
+    cv2.imshow("test", display)
     cv2.waitKey(0)
