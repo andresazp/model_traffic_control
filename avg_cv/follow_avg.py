@@ -4,35 +4,59 @@ import numpy as np
 import cv2
 
 hola = []
-
+debug = True
 
 class Avg(object):
     """Info for AVGs"""
-    def __init__(self, id, hue, coordinates = None):
+    def __init__(self, id, hsv, coordinates = None):
         super(Avg, self).__init__()
         self.id = id
-        self.hue = hue
-        self.coordinates = coordinates
-        # self.position = Null #place holder for whichs defined position is the AVG in
+        self.hsv = hsv
+        self.hue = hsv[0]
+        self.saturation = hsv[1]
+        self.value = hsv[2]
 
+        self.position = None
+        # self.coordinates = coordinates
+        # self.position = Null #place holder for
+        # whichs defined position is the AVG in
+    def center(self, frame):
+        return locateHue(frame, self)
 
-def click(event, x, y, flags, param):
+    def locate(self, frame, track):
+        for interesection in track:
+            loc = intersection.here(self.center(frame))
+            if loc:
+                return loc
+                break
+        return False
+
+def click(event, x, y, flags, args):
 
     # if the left mouse button was clicked, record the starting
     # (x, y) coordinates
     if event == cv2.EVENT_LBUTTONDOWN:
         clicked = (x, y)
-        print(str(clicked))
         hola.append(clicked)
 
 
-def locateHue(image, hue, print_image=None, debug=False):
+def locateHue(image, avg, print_image=None, debug=False):
     cv2.namedWindow("locateHue")
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-    hueTol = .2  # color tolerance
-    colorLower = np.array([hue * (1 - hueTol), 150, 90], np.uint8)
-    colorUpper = np.array([hue * (1 + hueTol), 255, 255], np.uint8)
+    tol = .2 # color tolerance
+    fl = 1 - tol # Floor
+    cl = 1 + tol # Ceiling
+
+    colorLower = np.array([avg.hsv[0] * fl, avg.hsv[1] * fl, avg.hsv[2] * fl],
+                          dtype=np.uint8)
+    colorUpper = np.array([avg.hsv[0] * cl,  255, 255], dtype=np.uint8)
+    if debug:
+        print avg.hsv
+        print avg.saturation
+        print colorLower
+        print colorUpper
+
     # Mask to idetify countoutrs for the color
     mask = cv2.inRange(image_hsv, colorLower, colorUpper)
     # mask image adecuacion
@@ -57,11 +81,11 @@ def locateHue(image, hue, print_image=None, debug=False):
         M = cv2.moments(c)
         center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
 
-        # if debug:
-        #     cv2.circle(image, (int(x), int(y)), int(radius), (0, 255, 255), 2)
-        #     cv2.circle(image, center, 5, (0, 0, 255), -1)
-        #     cv2.imshow("image sel", image)
-        #     cv2.waitKey(0)
+        if debug:
+            cv2.circle(image, (int(x), int(y)), int(radius), (0, 255, 255), 2)
+            cv2.circle(image, center, 5, (0, 0, 255), -1)
+            cv2.imshow("image sel", image)
+            cv2.waitKey(0)
 
         return center
 
@@ -103,9 +127,11 @@ def Setup_AVGs(capture):
             p=hola[-1]
             px=p[0]
             py=p[1]
-            this = Avg(AVGs, hsv[py, px][0])
-            print(hsv[py, px])
-
+            this = Avg(AVGs, hsv[py, px])
+            if debug:
+                print(hsv[py, px])
+                del hola[:-1]
+                print hola
 
         # if the 'n' key is pressed, next AVG, not saving
         if key == ord("n"):
@@ -120,7 +146,8 @@ def Setup_AVGs(capture):
                 p=hola[-1]
                 px=p[0]
                 py=p[1]
-                this = Avg(AVGs, hsv[py, px])
+                sel_hsv = hsv[py, px]
+                this = Avg(AVGs, sel_hsv)
                 print(str(this))
                 print(hola[-1])
                 print(hsv[py, px])
@@ -142,7 +169,8 @@ def Setup_AVGs(capture):
     print('AVGs:')
     image_AVGs = image_o.copy()
     for AVG in AVG_list:
-        center = locateHue(image_o, AVG.hue, print_image=image, debug=True)
+        # center = locateHue(image_o, AVG, print_image=image, debug=True)
+        center = locateHue(image_o, AVG, debug=True)
         print ('%i (hue:%s): %s' % (AVG.id, AVG.hue, center))
         cv2.circle(image_AVGs, (int(center[0]), int(center[1])), 20, (0, 255, 255), 2)
         cv2.circle(image_AVGs, center, 5, (0, 0, 255), -1)

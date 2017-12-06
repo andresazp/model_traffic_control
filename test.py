@@ -1,7 +1,6 @@
-from avg_cv.shape_detector import ShapeDetector
-from avg_cv.detect_tracks import define_tracks
 from avg_cv.follow_avg import Setup_AVGs
 from avg_cv.follow_avg import locateHue
+from avg_cv.detect_tracks import GameTrack
 import avg_cv.detect_tracks
 import argparse
 import imutils
@@ -22,14 +21,15 @@ mode_file = False
 if args["image"]:
     mode_file = True
     frame = cv2.imread(args["image"])
-    camera = False
+    using_camera = False
 else:
     print "using camera"
-    camera = True
-    cam = cv2.VideoCapture(0)
+    using_camera = True
+    camera_id = 0
     if args["camera"]:
         print "Camera selected: %i" % int(args["camera"])
-        cam = cv2.VideoCapture(int(args["camera"]))
+        camera_id = int(args["camera"])
+    cam = cv2.VideoCapture(camera_id)
     while True:
         ret, frame = cam.read()
         if not ret:
@@ -41,34 +41,36 @@ else:
             cv2.destroyAllWindows()
             break
 
+track = GameTrack(frame, 3, 4)
 
-define_tracks(frame, 3, 4)
-ret = None
-Frame = None
-while True:
-    ret, frame = cam.read()
-    if not ret:
-        break
-    cv2.imshow("presione espacio cuando haya colocado AVGs", frame)
-    k = cv2.waitKey(1)
-    if k%256 == 32:
-        # SPACE pressed
-        cv2.destroyAllWindows()
-        break
-
-AVG_list = Setup_AVGs(frame)
-
-while True:
-
-    if camera:
+if using_camera:
+    while True:
         ret, frame = cam.read()
         if not ret:
             break
+        cv2.imshow("presione espacio cuando haya colocado AVGs", frame)
+        k = cv2.waitKey(1)
+        if k%256 == 32:
+            # SPACE pressed
+            cv2.destroyAllWindows()
+            break
 
+AVG_list = Setup_AVGs(frame)
+print AVG_list
+
+while True:
+    if using_camera:
+        ret, frame = cam.read()
+        if not ret:
+            break
+    frame = imutils.resize(frame, width=900)
     cv2.namedWindow("real time")
     image_AVGs = frame.copy()
     for AVG in AVG_list:
-        center = locateHue(frame, AVG.hue)
+
+        center = locateHue(frame, AVG)
+        print AVG.center(frame)
+        print AVG.locate(frame, track)
         print ('%i (hue:%s): %s' % (AVG.id, AVG.hue, center))
         try:
             cv2.circle(image_AVGs, (int(center[0]), int(center[1])), 20, (0, 255, 255), 2)
@@ -77,7 +79,7 @@ while True:
                     cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
         except:
             print('target out of frame')
-    cv2.waitKey(1)
     cv2.imshow("real time", image_AVGs)
+    cv2.waitKey(1)
 # close all open windows
 cv2.destroyAllWindows()
