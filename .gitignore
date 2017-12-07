@@ -4,3 +4,7 @@
 demo/
 
 *.pyc
+
+avg_cv/-discarded-tracksfunc-detect_tracks\.py
+
+avg_cv copy/
