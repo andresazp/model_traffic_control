@@ -1,10 +1,12 @@
+from avg_cv.detect_tracks import Intersection
+from pprint import pprint
 import argparse
 import imutils
 import numpy as np
 import cv2
 
 hola = []
-debug = True
+debug = 0
 
 class Avg(object):
     """Info for AVGs"""
@@ -24,12 +26,70 @@ class Avg(object):
         return locateHue(frame, self)
 
     def locate(self, frame, track):
-        for interesection in track:
-            loc = intersection.here(self.center(frame))
-            if loc:
-                return loc
-                break
-        return False
+        found = track.which_intersection(self.center(frame))
+        if found:
+            return {"intersection": found, "position": found.here(self.center(frame))}
+        else:
+            print "point NOT located"
+            return False
+        # for interesection in interesections:
+        #     loc = intersection.here(self.center(frame))
+        #     if debug:
+        #         print loc
+        #     if loc:
+        #         return loc
+        #         break
+        # return False
+
+    def coord(self, image, print_image=None, debug=False):
+        # TODO: deprecate
+        cv2.namedWindow("locateHue")
+        image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+        tol = .2 # color tolerance
+        fl = 1 - tol # Floor
+        cl = 1 + tol # Ceiling
+
+        colorLower = np.array([self.hsv[0] * fl, self.hsv[1] * fl, self.hsv[2] * fl],
+                              dtype=np.uint8)
+        colorUpper = np.array([self.hsv[0] * cl,  255, 255], dtype=np.uint8)
+        if debug:
+            print self.hsv
+            print self.saturation
+            print colorLower
+            print colorUpper
+
+        # Mask to idetify countoutrs for the color
+        mask = cv2.inRange(image_hsv, colorLower, colorUpper)
+        # mask image adecuacion
+        mask = cv2.erode(mask, None, iterations=3)
+        mask = cv2.dilate(mask, None, iterations=2)
+        res = cv2.bitwise_and(image, image, mask=mask)
+        # find contours in the mask and initialize the current
+        # (x, y) center of the AVG
+        cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
+                                cv2.CHAIN_APPROX_SIMPLE)[-2]
+        center = None
+        if debug:
+            cv2.imshow("hue_mask", res)
+            cv2.waitKey(0)
+        # only proceed if at least one contour was found
+        if len(cnts) > 0:
+            # find the largest contour in the mask, then use
+            # it to compute the minimum enclosing circle and
+            # centroid
+            c = max(cnts, key=cv2.contourArea)
+            ((x, y), radius) = cv2.minEnclosingCircle(c)
+            M = cv2.moments(c)
+            center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+
+            if debug:
+                cv2.circle(image, (int(x), int(y)), int(radius), (0, 255, 255), 2)
+                cv2.circle(image, center, 5, (0, 0, 255), -1)
+                cv2.imshow("image sel", image)
+                cv2.waitKey(0)
+
+            return center
 
 def click(event, x, y, flags, args):
 
@@ -41,6 +101,7 @@ def click(event, x, y, flags, args):
 
 
 def locateHue(image, avg, print_image=None, debug=False):
+    # TODO: deprecate
     cv2.namedWindow("locateHue")
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
