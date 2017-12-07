@@ -9,16 +9,48 @@ import cv2
 from pprint import pprint
 
 return_tracks = False
-debug = True
+debug = 1
 
 
 class GameTrack(list):
     """docstring for ."""
-    ''''condiciones globales sobre las direcciones de las calles y avenidas '''
+    """condiciones globales sobre las direcciones de las calles y avenidas """
     def __init__(self, frame, avenues, streets):
-        super(list, self).__init__(define_tracks(frame, avenues, streets))
+        super(GameTrack, self).__init__()
+        self.intersections = define_tracks(frame, avenues, streets)
+        # if debug:
+        #     print "!!! estas son als intersecciones del game track:"
+        #     pprint(self.intersections)
         self.avenues = avenues
         self.streets = streets
+        self.frame = frame
+
+    def which_intersection(self, point):
+        found = next(
+            intersection for intersection in self.intersections
+            if intersection.here(point)
+        )
+        if found:
+            if debug > 1:
+                print "intersection for point found"
+                pprint(vars(found))
+            return found
+        else:
+            if debug >1:
+                print "intersection for  NOT found"
+            return False
+
+    def locate(self, point):
+        found = self.which_intersection(point)
+        if found:
+            if debug >1:
+                print "point located"
+                pprint(vars(test))
+            return {"intersection": found, "position": found.here(point)}
+        else:
+            print "point NOT located"
+            return False
+
 
 def av_right(avenue):
     if avenue % 2 == 0:
@@ -62,19 +94,14 @@ class Intersection(Crossing):
     def here(self, p):
         if cv2.pointPolygonTest(self.vertices, p, False) == 1:
             return "x"
-        elif cv2.pointPolygonTest(self.avenue_position.vertices, p, False) == 1:
-            return "av"
-        elif cv2.pointPolygonTest(self.street_position.vertices, p, False) == 1:
-            return "st"
+        if self.avenue_position:
+            if cv2.pointPolygonTest(self.avenue_position.vertices, p, False) == 1:
+                return "av"
+        if self.street_position:
+            if cv2.pointPolygonTest(self.street_position.vertices, p, False) == 1:
+                return "st"
         else:
             return False
-
-#  TODO: implement Tracks class
-# class Tracks(list):
-#     '''
-#     '''
-#
-#     def __init__(self, avenues, streets)
 
 
 def from_st(crossing, intersection_zone_list, streets, avenues):
@@ -320,30 +347,49 @@ def define_tracks(capture, avenues, streets):
         print intersection_list
     for intersection in intersection_list:
         if debug:
-            pprint(vars(item))
-            pprint(vars(item))
+            pprint(vars(intersection))
         if intersection.avenue_position:
             if debug:
                 print "avenue_position"
                 pprint(vars(intersection.avenue_position))
             # wait_av = np.array(intersection.avenue_position, dtype="int32")
-            cv2.fillPoly(display, [intersection.avenue_position.vertices],(100, 100, 255, 0.1), 4)
+            cv2.fillPoly(display, [intersection.avenue_position.vertices],(100, 100, 255), 4)
         if intersection.street_position:
             if debug:
                 print "street_position"
                 pprint(vars(intersection.street_position))
             # wait_st = np.array(intersection.street_position, dtype="int32")
-            cv2.fillPoly(display, [intersection.street_position.vertices],(255, 100, 100, 0.1), 4)
+            cv2.fillPoly(display, [intersection.street_position.vertices],(255, 100, 100), 4)
 
 
 
         cv2.imshow("intersecion list", display)
 
+        if debug >= 2:
+            print "\n\nTest Here() del 4 donde esta el azul:"
+            r = intersection_list[4].here((289, 276))
+            if r:
+                print str(r)
+            else:
+                print 'no r'
+
+            test_p = (289, 276)
+            print "\n\nTest %i,%i en todo intersection_list" % (test_p[0],test_p[1])
+            test = next(
+                intersection for intersection in intersection_list
+                if intersection.here(test_p) == 'av'
+            )
+            if test:
+                print "hay test"
+                print test
+                pprint(vars(test))
+                print test.here((289, 276))
+
+
         if debug:
-            cv2.waitKey(0)
-        else:
-            cv2.waitKey(200)
-    cv2.waitKey(0)
+            cv2.waitKey(100)
+
     display=display_backup.copy()
     cv2.imshow("test", display)
     cv2.waitKey(0)
+    return intersection_list
