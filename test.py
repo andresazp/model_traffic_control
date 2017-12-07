@@ -1,11 +1,13 @@
 from avg_cv.follow_avg import Setup_AVGs
 from avg_cv.follow_avg import locateHue
 from avg_cv.detect_tracks import GameTrack
+from avg_cv.detect_tracks import Intersection
 import avg_cv.detect_tracks
 import argparse
 import imutils
 import cv2
-
+from pprint import pprint
+debug= 0
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -42,6 +44,13 @@ else:
             break
 
 track = GameTrack(frame, 3, 4)
+intersections = track.intersections
+if debug:
+    pprint(vars(track))
+    # pprint(vars(track.intersections))
+    # stop to review with imput
+    whatever_var = raw_input('input something!: ') #not using var
+
 
 if using_camera:
     while True:
@@ -56,7 +65,8 @@ if using_camera:
             break
 
 AVG_list = Setup_AVGs(frame)
-print AVG_list
+if debug:
+    pprint((AVG_list))
 
 while True:
     if using_camera:
@@ -67,18 +77,24 @@ while True:
     cv2.namedWindow("real time")
     image_AVGs = frame.copy()
     for AVG in AVG_list:
-
         center = locateHue(frame, AVG)
-        print AVG.center(frame)
-        print AVG.locate(frame, track)
-        print ('%i (hue:%s): %s' % (AVG.id, AVG.hue, center))
+        print ('\n\n AVG:%i (hue:%s): Intersecion:%i,%i:%s' % (AVG.id, AVG.hue,
+        AVG.locate(frame, track)["intersection"].av,
+        AVG.locate(frame, track)["intersection"].st,
+        AVG.locate(frame, track)["position"],
+        ))
+        if debug:
+            print AVG.center(frame)
+            print AVG.locate(frame, track)
+            print "locate response:"
+            pprint(vars(AVG.locate(frame, track)))
         try:
             cv2.circle(image_AVGs, (int(center[0]), int(center[1])), 20, (0, 255, 255), 2)
             cv2.circle(image_AVGs, center, 5, (0, 0, 255), -1)
             cv2.putText(image_AVGs, "AVG " + str(AVG.id), (center[0] + 10, center[1] + 10),
                     cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
         except:
-            print('target out of frame')
+            print('e: target out of frame')
     cv2.imshow("real time", image_AVGs)
     cv2.waitKey(1)
 # close all open windows
