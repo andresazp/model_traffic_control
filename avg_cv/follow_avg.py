@@ -5,23 +5,25 @@ import imutils
 import numpy as np
 import cv2
 
-hola = []
+clicks = [] #temporary variable
 debug = 0
 
 class Avg(object):
     """Info for AVGs"""
-    def __init__(self, id, hsv, coordinates = None):
+    def __init__(self, id, hsv,
+                 coordinates=None, objective=None):
         super(Avg, self).__init__()
         self.id = id
         self.hsv = hsv
         self.hue = hsv[0]
         self.saturation = hsv[1]
         self.value = hsv[2]
-
+        self.objective = objective
         self.position = None
         # self.coordinates = coordinates
         # self.position = Null #place holder for
         # whichs defined position is the AVG in
+
     def center(self, frame):
         return locateHue(frame, self)
 
@@ -40,6 +42,24 @@ class Avg(object):
         #         return loc
         #         break
         # return False
+
+    def draw(self, frame, track=None):
+        pprint(vars(self))
+        # print self.center(frame)
+        # center = self.center
+        # print center
+        cv2.circle(frame, (self.center(frame)[0], self.center(frame)[1]), 20, (0, 255, 255), 2)
+        cv2.circle(frame, self.center(frame), 5, (0, 0, 255), -1)
+        cv2.putText(frame, "AVG " + str(self.id), (self.center(frame)[0] + 10, self.center(frame)[1] + 10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
+        if track:
+            cv2.putText(frame, "(" +
+                        str(locate(frame, track))["intersection"].av,+
+                        ','+
+                        str(locate(frame, track))["intersection"].st +
+                        str(locate(frame, track))["position"],
+                        (self.center[0] + 10, self.center[1] + 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
+        return frame
 
     def coord(self, image, print_image=None, debug=False):
         # TODO: deprecate
@@ -97,7 +117,7 @@ def click(event, x, y, flags, args):
     # (x, y) coordinates
     if event == cv2.EVENT_LBUTTONDOWN:
         clicked = (x, y)
-        hola.append(clicked)
+        clicks.append(clicked)
 
 
 def locateHue(image, avg, print_image=None, debug=False):
@@ -170,7 +190,7 @@ def Setup_AVGs(capture):
     cv2.setMouseCallback("setup", click)
     this = None
 
-    print(hola)
+    print(clicks)
 
     print('haga click sobre el AVG %i para identificar su color' % AVGs)
     print('Para guardar presione S\n')
@@ -182,17 +202,17 @@ def Setup_AVGs(capture):
     	# display the image and wait for a keypress
         cv2.imshow("setup", image_select_hue)
         key = cv2.waitKey(1) & 0xFF
-        if len(hola) >0 :
+        if len(clicks) >0 :
             image_select_hue = image_o.copy()
-            cv2.circle(image_select_hue, hola[-1], 5, (0, 0, 255), -1)
-            p=hola[-1]
+            cv2.circle(image_select_hue, clicks[-1], 5, (0, 0, 255), -1)
+            p=clicks[-1]
             px=p[0]
             py=p[1]
             this = Avg(AVGs, hsv[py, px])
             if debug:
                 print(hsv[py, px])
-                del hola[:-1]
-                print hola
+                del clicks[:-1]
+                print clicks
 
         # if the 'n' key is pressed, next AVG, not saving
         if key == ord("n"):
@@ -202,22 +222,22 @@ def Setup_AVGs(capture):
             print('haga click sobre el AVG %i para identificar color' % AVGs)
 
         elif key == ord("s"):
-            if len(hola) >0 :
+            if len(clicks) >0 :
                 print('saving...')
-                p=hola[-1]
+                p=clicks[-1]
                 px=p[0]
                 py=p[1]
                 sel_hsv = hsv[py, px]
                 this = Avg(AVGs, sel_hsv)
                 print(str(this))
-                print(hola[-1])
+                print(clicks[-1])
                 print(hsv[py, px])
 
                 AVG_list.append(this)
                 AVGs += 1
                 image_select_hue = image_o.copy()
                 this = None
-                for i in hola:
+                for i in clicks:
                    del i
                 print('haga click sobre el AVG %i para identificar su color' % AVGs)
                 # break
@@ -243,3 +263,46 @@ def Setup_AVGs(capture):
     # close all open windows
     cv2.destroyAllWindows()
     return AVG_list
+
+
+def setup_Goals(frame, AVG_list, track):
+    for AVG in AVG_list:
+        print "Please click objective destination"
+        img_avg = AVG.draw(frame, track)
+        objective = None
+        while True:
+            # keep looping until the *space* key is pressed
+        	# display the image and wait for a keypress
+            avg_goal = img_avg.copy()
+            cv2.imshow("Select destination for AVG", avg_goal)
+            cv2.setMouseCallback("Select destination for AVG", click)
+            key = cv2.waitKey(1) & 0xFF
+            if len(clicks) >0 :
+                image_select_hue = img_avg.copy()
+                cv2.circle(image_select_hue, clicks[-1], 5, (0, 0, 255), -1)
+                p=clicks[-1]
+                px=p[0]
+                py=p[1]
+                proto_objective = track.locate(p)
+                if debug:
+                    print objective
+                if proto_objective["position"] == "x":
+                    objective = proto_objective
+                # else:
+                #     print "please select a vaid destination"
+                del clicks[:-1]
+                if debug:
+                    print clicks
+
+            if key == ord(" "):
+                # if the *SPACE* key is pressed
+                if objective:
+                    AVG.objective = objective
+                    print ("Saved objective vor AVG %i:%i,%i:%s" % (
+                    AVG.id,
+                    AVG.locate(frame, track)["intersection"].av,
+                    AVG.locate(frame, track)["intersection"].st,
+                    AVG.locate(frame, track)["position"]), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
+                    break
+                else:
+                    print "please select a vaid destination"

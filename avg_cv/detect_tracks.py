@@ -13,7 +13,6 @@ debug = 1
 
 
 class GameTrack(list):
-    """docstring for ."""
     """condiciones globales sobre las direcciones de las calles y avenidas """
     def __init__(self, frame, avenues, streets):
         super(GameTrack, self).__init__()
@@ -353,7 +352,7 @@ def define_tracks(capture, avenues, streets):
                 print "avenue_position"
                 pprint(vars(intersection.avenue_position))
             # wait_av = np.array(intersection.avenue_position, dtype="int32")
-            cv2.fillPoly(display, [intersection.avenue_position.vertices],(100, 100, 255), 4)
+            cv2.fillPoly(display, [intersection.avenue_position.vertices], (100, 100, 255), 4)
         if intersection.street_position:
             if debug:
                 print "street_position"
@@ -366,6 +365,7 @@ def define_tracks(capture, avenues, streets):
         cv2.imshow("intersecion list", display)
 
         if debug >= 2:
+            #testing finding locaiton of points
             print "\n\nTest Here() del 4 donde esta el azul:"
             r = intersection_list[4].here((289, 276))
             if r:

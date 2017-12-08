@@ -164,15 +164,15 @@ def locate_intersections(frame, avenues, streets):
     #
     # gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
     # gray = cv2.erode(gray, None, iterations=1)
-    # gray = cv2.dilate(gray, None, iterations=6)
+    # gray = cv2.dilate(gray, None, iterations=5)
     # blurred = cv2.medianBlur(gray, 9)
-    # gray = cv2.dilate(gray, None, iterations=6)
+    # gray = cv2.dilate(gray, None, iterations=4)
     # blurred = cv2.medianBlur(blurred, 9)
     # blurred = cv2.erode(blurred, None, iterations=1)
-    # thresh = cv2.threshold(blurred, 180, 255, cv2.THRESH_BINARY)[1]
+    # thresh = cv2.threshold(blurred, 140, 255, cv2.THRESH_BINARY)[1]
     # cv2.imshow("threshhold SIMPLIFICADO", thresh)
     # cv2.waitKey(0)
-
+    #
 
 
 
@@ -264,7 +264,8 @@ def locate_intersections(frame, avenues, streets):
                     (0, 0, 0),
                     2)
     cv2.imshow("Crossings", display)
-    cv2.waitKey(0)
+    if debug:
+        cv2.waitKey(100)
     # show the output image
 
     cv2.destroyAllWindows()

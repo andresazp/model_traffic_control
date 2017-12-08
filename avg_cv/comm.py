@@ -1,8 +1,11 @@
 import time
-import pyserial
+import serial
 
-def send_basic(device, array=None):
-    out = serial.Serial("/dev/tty.usbserial-FT3W5E11")  #Serial device id
+def send_basic(array, device=None):
+    if device:
+        out = serial.Serial(device, baudrate=9600)  #Serial device id /dev/tty.usbserial-FT3W5E11
+    else:
+        out = serial.Serial("/dev/tty.usbserial-FT3W5E11", baudrate=9600)  #Serial device id /dev/tty.usbserial-FT3W5E11
     for i in range(3):
         out.write("#")
         print "#"
@@ -10,7 +13,4 @@ def send_basic(device, array=None):
         for char in array:
             out.write(char)
             print char
-    else:
-        out.write('!')
-        print "!"
     return True
