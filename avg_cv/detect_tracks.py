@@ -25,16 +25,21 @@ class GameTrack(list):
         self.frame = frame
 
     def which_intersection(self, point):
-        found = next(
-            intersection for intersection in self.intersections
-            if intersection.here(point)
-        )
-        if found:
-            if debug > 1:
-                print "intersection for point found"
-                pprint(vars(found))
-            return found
-        else:
+        try:
+            found = next(
+                intersection for intersection in self.intersections
+                if intersection.here(point), none
+            )
+            if found:
+                if debug > 1:
+                    print "intersection for point found"
+                    pprint(vars(found))
+                return found
+            else:
+                if debug >1:
+                    print "intersection for  NOT found"
+                return False
+        except:
             if debug >1:
                 print "intersection for  NOT found"
             return False
