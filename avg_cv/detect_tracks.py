@@ -28,7 +28,7 @@ class GameTrack(list):
         try:
             found = next(
                 intersection for intersection in self.intersections
-                if intersection.here(point), none
+                if intersection.here(point)
             )
             if found:
                 if debug > 1:
