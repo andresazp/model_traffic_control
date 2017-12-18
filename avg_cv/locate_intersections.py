@@ -1,6 +1,4 @@
 from avg_cv.shape_detector import ShapeDetector
-
-from scipy.spatial import distance
 import imutils
 import numpy as np
 import cv2
