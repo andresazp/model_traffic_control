@@ -34,23 +34,24 @@ class Avg(object):
         else:
             print "point NOT located"
             return False
-        # for interesection in interesections:
-        #     loc = intersection.here(self.center(frame))
-        #     if debug:
-        #         print loc
-        #     if loc:
-        #         return loc
-        #         break
-        # return False
 
     def draw(self, frame, track=None):
         pprint(vars(self))
         # print self.center(frame)
         # center = self.center
         # print center
+        x = self.center(frame)[0]
+        y = self.center(frame)[1]
+
         cv2.circle(frame, (self.center(frame)[0], self.center(frame)[1]), 20, (0, 255, 255), 2)
         cv2.circle(frame, self.center(frame), 5, (0, 0, 255), -1)
-        cv2.putText(frame, "AVG " + str(self.id), (self.center(frame)[0] + 10, self.center(frame)[1] + 10), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
+
+        cv2.putText(frame, "AVG %i" % self.id,
+                    (x - 35, y + 15),
+                    cv2.FONT_HERSHEY_SIMPLEX, .5,
+                    (0, 0, 0),
+                    2)
+
         if track:
             cv2.putText(frame, "(" +
                         str(locate(frame, track))["intersection"].av,+
@@ -266,10 +267,14 @@ def Setup_AVGs(capture):
 
 
 def setup_Goals(frame, AVG_list, track):
+    obj=None
     for AVG in AVG_list:
         print "Please click objective destination"
+        if debug:
+            pprint(vars(AVG))
         img_avg = AVG.draw(frame, track)
         objective = None
+        obj=None
         while True:
             # keep looping until the *space* key is pressed
         	# display the image and wait for a keypress
@@ -279,30 +284,38 @@ def setup_Goals(frame, AVG_list, track):
             key = cv2.waitKey(1) & 0xFF
             if len(clicks) >0 :
                 image_select_hue = img_avg.copy()
-                cv2.circle(image_select_hue, clicks[-1], 5, (0, 0, 255), -1)
+                cv2.circle(avg_goal, clicks[-1], 5, (0, 0, 255), 5)
+                cv2.imshow("Select destination for AVG", avg_goal)
                 p=clicks[-1]
                 px=p[0]
                 py=p[1]
+
                 proto_objective = track.locate(p)
-                if debug:
-                    print objective
-                if proto_objective["position"] == "x":
-                    objective = proto_objective
+                try:
+                    pprint(vars(proto_objective))
+                except:
+                    print proto_objective
+                if proto_objective["position"] == 'x':
+                    obj = track.locate(p)
+                    print obj
+                    print "good"
+                # try:
+                # except:
+                #     objective = None
                 # else:
                 #     print "please select a vaid destination"
                 del clicks[:-1]
-                if debug:
-                    print clicks
 
             if key == ord(" "):
                 # if the *SPACE* key is pressed
-                if objective:
+                print obj
+                if obj:
+                    objective=obj
                     AVG.objective = objective
-                    print ("Saved objective vor AVG %i:%i,%i:%s" % (
+                    pprint(AVG.locate(frame, track))
+                    print ("Saved objective vor AVG %i:%s" % (
                     AVG.id,
-                    AVG.locate(frame, track)["intersection"].av,
-                    AVG.locate(frame, track)["intersection"].st,
-                    AVG.locate(frame, track)["position"]), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
+                    AVG.objective), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
                     break
                 else:
                     print "please select a vaid destination"

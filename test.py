@@ -93,11 +93,19 @@ while True:
     image_AVGs = frame.copy()
     for AVG in AVG_list:
         center = locateHue(frame, AVG)
-        print ('\n\n AVG:%i (hue:%s): Intersecion:%i,%i:%s' % (AVG.id, AVG.hue,
-        AVG.locate(frame, track)["intersection"].av,
-        AVG.locate(frame, track)["intersection"].st,
-        AVG.locate(frame, track)["position"],
-        ))
+        try:
+            if AVG.locate(frame, track):
+                    print ('\n\n AVG:%i (hue:%s): Intersecion:%i,%i:%s \n coord: (%i,%i)' % (AVG.id, AVG.hue,
+                    AVG.locate(frame, track)["intersection"].av,
+                    AVG.locate(frame, track)["intersection"].st,
+                    AVG.locate(frame, track)["position"],
+                    center[0], center[1]
+                ))
+            else:
+                print ('\n\n AVG:%i (hue:%s): \n coord: (%i,%i)' % (AVG.id, AVG.hue, center[0], center[1]))
+        except:
+            print ('\n\n AVG:%i (hue:%s): \n' % (AVG.id, AVG.hue, center[0], center[1]))
+
         if debug:
             print AVG.center(frame)
             print AVG.locate(frame, track)
@@ -110,6 +118,7 @@ while True:
             cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
         except:
             print('e: target out of frame')
+
     cv2.imshow("real time", image_AVGs)
     cv2.waitKey(1)
 # close all open windows

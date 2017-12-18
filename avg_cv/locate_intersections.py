@@ -8,17 +8,20 @@ from pprint import pprint
 
 debug = True
 
+
 def av_right(avenue):
     if avenue % 2 == 0:
         return True
     else:
         return False
 
+
 def st_down(street):
     if street % 2 == 0:
         return True
     else:
         return False
+
 
 class Zone(object):
     """basisc about one intersection un the tacks.
@@ -154,14 +157,17 @@ def locate_intersections(frame, avenues, streets):
     cv2.destroyWindow("Imagen a procesar")
 
 
-    #preprocess to get iniital contours
+    '''preprocess to get iniital contours'''
+
     gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
     gray = cv2.dilate(gray, None, iterations=1)
+    cv2.imshow("dilate 1", gray)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    thresh = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY)[1]
+    thresh = cv2.threshold(blurred, 135, 255, cv2.THRESH_BINARY)[1]
+    # thresh = cv2.dilate(thresh, None, iterations=4)
     cv2.imshow("threshhold", thresh)
     cv2.waitKey(0)
-    #
+
     # gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
     # gray = cv2.erode(gray, None, iterations=1)
     # gray = cv2.dilate(gray, None, iterations=5)
@@ -169,10 +175,10 @@ def locate_intersections(frame, avenues, streets):
     # gray = cv2.dilate(gray, None, iterations=4)
     # blurred = cv2.medianBlur(blurred, 9)
     # blurred = cv2.erode(blurred, None, iterations=1)
-    # thresh = cv2.threshold(blurred, 140, 255, cv2.THRESH_BINARY)[1]
+    # thresh = cv2.threshold(blurred, 170, 255, cv2.THRESH_BINARY)[1]
     # cv2.imshow("threshhold SIMPLIFICADO", thresh)
     # cv2.waitKey(0)
-    #
+
 
 
 
@@ -187,9 +193,9 @@ def locate_intersections(frame, avenues, streets):
     # loop over the contours
     i = 0
     display = frame
-    intersection_zones = list()
 
-    # get all intersections
+    square_zones = list()
+
     for c in contours:
         peri = cv2.arcLength(c, True)
         vertices = cv2.approxPolyDP(c, 0.04 * peri, True)
@@ -226,9 +232,11 @@ def locate_intersections(frame, avenues, streets):
             if debug:
                 pprint(vars(item))
                 pprint(dir(item))
-            intersection_zones.append(item)
             i += 1
-
+            square_zones.append(item)
+    # sorted_squares = sorted(zip(size, square_zones), key=lambda x: x[0], reverse=True)
+    square_zones.sort(key=lambda square: square.size, reverse=True)
+    intersection_zones = square_zones[:12]
 
     "ordering intersecions un x,y"
     # order by y axis
@@ -253,13 +261,13 @@ def locate_intersections(frame, avenues, streets):
     if debug:
         print "crossings"
         pprint(crossings)
-    for crossing in crossings:
+    for i, crossing in enumerate(crossings):
         cv2.polylines(display, [crossing.contour], True, (0, 255, 0), 1)
         # cv2.drawContour(display, zone.contour, -1, (0, 255, 0), 2)
         cv2.circle(display, crossing.center, 2, (255, 0, 255), -1)
         cv2.polylines(display, [crossing.vertices], True, (255, 0, 255), 2)
-        cv2.putText(display, "%i: %i,%i" % (i + 1, av, st),
-                    (zone.center[0] - 35, zone.center[1] + 15),
+        cv2.putText(display, "%i: %i,%i" % (i + 1, crossing.av, crossing.st),
+                    (crossing.center[0] - 35, crossing.center[1] + 15),
                     cv2.FONT_HERSHEY_SIMPLEX, .5,
                     (0, 0, 0),
                     2)
